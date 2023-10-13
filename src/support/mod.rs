@@ -18,9 +18,30 @@ pub struct System {
     pub platform: WinitPlatform,
     pub renderer: Renderer,
     pub font_size: f32,
+    pub background: SystemColor,
 }
 
-pub fn init(title: &str) -> System {
+// Only really needed to send a background color to init()
+pub struct SystemColor {
+    pub red: f32,
+    pub green: f32,
+    pub blue: f32,
+    pub alpha: f32,
+}
+
+#[allow(dead_code)]
+impl SystemColor {
+    pub fn from_rgb(r: u8, g: u8, b: u8) -> SystemColor {
+        SystemColor { 
+            red: r as f32 / 255f32,
+            green: g as f32 / 255f32,
+            blue: b as f32 / 255f32,
+            alpha: 1.0,
+        }
+    }
+}
+
+pub fn init(title: &str, width: i32, height: i32, bgcolor: SystemColor) -> System {
     let title = match Path::new(&title).file_name() {
         Some(file_name) => file_name.to_str().unwrap(),
         None => title,
@@ -29,9 +50,8 @@ pub fn init(title: &str) -> System {
     let context = glutin::ContextBuilder::new().with_vsync(true);
     let builder = WindowBuilder::new()
         .with_title(title.to_owned())
-        .with_inner_size(glutin::dpi::LogicalSize::new(1024f64, 768f64));
-    let display =
-        Display::new(builder, context, &event_loop).expect("Failed to initialize display");
+        .with_inner_size(glutin::dpi::LogicalSize::new(width, height));
+    let display = Display::new(builder, context, &event_loop).expect("Failed to initialize display");
 
     let mut imgui = Context::create();
     imgui.set_ini_filename(None);
@@ -127,6 +147,7 @@ pub fn init(title: &str) -> System {
         platform,
         renderer,
         font_size,
+        background: bgcolor,
     }
 }
 
@@ -138,6 +159,7 @@ impl System {
             mut imgui,
             mut platform,
             mut renderer,
+            background,
             ..
         } = self;
         let mut last_frame = Instant::now();
@@ -166,7 +188,7 @@ impl System {
 
                 let gl_window = display.gl_window();
                 let mut target = display.draw();
-                target.clear_color_srgb(1.0, 1.0, 1.0, 1.0);
+                target.clear_color(background.red, background.green, background.blue, background.alpha);
                 platform.prepare_render(ui, gl_window.window());
                 let draw_data = imgui.render();
                 renderer
